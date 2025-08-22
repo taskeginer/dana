@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Top Up Pulsa & DANA</title>
+
+  <!-- AOS (optional animation lib) -->
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --primary: #00ffe0;
+      --secondary: #00bfa5;
+      --accent: #e74c3c;
+      --bg-dark: linear-gradient(145deg,#1a1a1d,#0e0e10);
+      --text-light: #e0e0e0;
+      --card-bg: rgba(15,15,17,0.95);
+      --glass: rgba(20,20,20,0.6);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial;
+      background:var(--bg-dark);
+      color:var(--text-light);
+      padding:24px;
+      display:flex;
+      justify-content:center;
+    }
+
+    .wrapper{width:100%;max-width:1100px;}
+
+    header.appbar{
+      background: rgba(15,15,17,0.85);
+      padding:16px;
+      border-radius:12px;
+      color:var(--primary);
+      text-align:center;
+      margin-bottom:18px;
+      font-weight:700;
+    }
+
+    .dashboard{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:18px;
+      align-items:start;
+    }
+
+    .column{
+      background: var(--card-bg);
+      border-radius:12px;
+      padding:16px;
+    }
+
+    .column h2{margin:0 0 8px 0;color:var(--primary);font-size:18px;}
+    .column p.subtitle{margin:0 0 12px 0;color:#9fbec0;font-size:13px;}
+
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+    .field label{color:var(--primary);font-weight:700;font-size:13px;}
+    .field input{
+      padding:10px 12px;
+      border-radius:8px;
+      border:1px solid rgba(0,255,224,0.18);
+      background:#0e0e10;
+      color:var(--text-light);
+    }
+
+    .nominal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px;}
+    .nominal{
+      background: rgba(20,20,20,0.9);
+      padding:12px;
+      border-radius:10px;
+      text-align:center;
+      cursor:pointer;
+      transition:transform .12s ease;
+    }
+    .nominal:hover{transform: translateY(-4px);}
+    .nominal .label{font-weight:700;color:var(--primary)}
+    .nominal .sub{font-size:13px;color:#9aa6a6;margin-top:6px}
+    .nominal .cost{margin-top:8px;font-weight:800;color:var(--secondary)}
+
+    .helper{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;color:#9fbec0;font-size:13px;}
+
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.64);z-index:9999;align-items:center;justify-content:center;padding:20px;}
+    .modal.show{display:flex}
+    .modal-card{
+      width:100%;max-width:520px;background:rgba(15,15,17,0.98);
+      border-radius:12px;padding:18px;color:var(--text-light);
+    }
+    .modal-card h3{margin:0 0 12px 0;color:var(--primary)}
+    .modal-row{display:flex;gap:12px;flex-wrap:wrap}
+    .modal-row .col{flex:1;min-width:150px}
+    .modal .meta{margin:10px 0;padding:10px;background:rgba(20,20,20,0.7);border-radius:8px;}
+    .modal .meta p{margin:6px 0;color:#bcdeda}
+
+    .btn{padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;}
+    .btn.primary{background:var(--primary);color:#001;}
+    .btn.ghost{background:transparent;color:var(--text-light);border:1px solid rgba(255,255,255,0.06);}
+
+    @media (max-width:880px){.dashboard{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+  <div class="wrapper">
+    <header class="appbar">🎯 DASHBOARD TOP UP DANA & Pulsa</header>
+
+    <div class="dashboard">
+
+      <!-- LEFT: Top Up DANA -->
+      <section class="column">
+        <h2>💳 Top Up DANA</h2>
+        <p class="subtitle">Isi saldo DANA dengan cepat. Pilih nominal lalu tekan beli.</p>
+        <div class="field">
+          <label for="danaNumber">Nomor DANA</label>
+          <input id="danaNumber" type="text" placeholder="Masukkan nomor DANA">
+        </div>
+        <div class="helper"><span>Biaya admin: Rp5.000</span><span>Saldo realtime (tidak terhubung)</span></div>
+        <div class="nominal-grid" id="danaGrid"></div>
+      </section>
+
+      <!-- RIGHT: Pulsa -->
+      <section class="column">
+        <h2>📱 Pulsa</h2>
+        <p class="subtitle">Top up pulsa prabayar. Masukkan nomor HP lalu pilih nominal.</p>
+        <div class="field">
+          <label for="hpNumber">Nomor HP</label>
+          <input id="hpNumber" type="text" placeholder="Masukkan nomor HP">
+        </div>
+        <div class="helper"><span>Biaya admin: Rp5.000</span><span>Metode pembayaran: DANA / Transfer / VA</span></div>
+        <div class="nominal-grid" id="pulsaGrid"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="orderModal" aria-hidden="true">
+    <div class="modal-card" role="dialog">
+      <h3 id="modalTitle">Detail Pembelian</h3>
+      <div class="field"><label for="buyerName">Nama</label><input id="buyerName" type="text"></div>
+      <div class="modal-row">
+        <div class="col field"><label for="modalNumber">Nomor (HP / DANA)</label><input id="modalNumber" type="text"></div>
+        <div class="col field"><label for="modalNominal">Nominal</label><input id="modalNominal" type="text" readonly></div>
+      </div>
+      <div class="modal-row">
+        <div class="col meta"><p><strong>Harga:</strong> <span id="modalHarga">-</span></p><p><strong>Biaya Admin:</strong> Rp5.000</p><p><strong>Total:</strong> <span id="modalTotal">-</span></p></div>
+        <div class="col meta"><p><strong>Tanggal:</strong> <span id="modalTanggal">-</span></p><p><strong>Jenis:</strong> <span id="modalJenis">-</span></p></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn ghost" id="closeModal">Batal</button>
+        <button class="btn primary" id="sendWhatsApp">Kirim ke WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    AOS.init({duration:700, once:true});
+
+    const danaOptions=[{nominal:'20.000',harga:20000},{nominal:'25.000',harga:25000},{nominal:'50.000',harga:50000},{nominal:'75.000',harga:75000},{nominal:'100.000',harga:100000},{nominal:'150.000',harga:150000},{nominal:'200.000',harga:200000},{nominal:'300.000',harga:300000},{nominal:'500.000',harga:500000},{nominal:'1.000.000',harga:1000000}];
+    const pulsaOptions=[{nominal:'2.000',harga:3300},{nominal:'5.000',harga:6000},{nominal:'10.000',harga:11000},{nominal:'15.000',harga:15990},{nominal:'20.000',harga:20990},{nominal:'25.000',harga:25990},{nominal:'30.000',harga:30990},{nominal:'50.000',harga:50990},{nominal:'75.000',harga:75990},{nominal:'100.000',harga:100990},{nominal:'200.000',harga:200000},{nominal:'500.000',harga:500000},{nominal:'1.000.000',harga:1000000}];
+
+    const danaGrid=document.getElementById('danaGrid');
+    const pulsaGrid=document.getElementById('pulsaGrid');
+    function formatRupiah(num){return 'Rp'+Number(num).toLocaleString('id-ID');}
+    function createOptionEl(item){const el=document.createElement('div');el.className='nominal';el.innerHTML=`<div class="label">${item.nominal}</div><div class="sub">Top Up</div><div class="cost">${formatRupiah(item.harga)}</div>`;return el;}
+
+    danaOptions.forEach(opt=>{const el=createOptionEl(opt);el.addEventListener('click',()=>openOrderModal('Top Up DANA','dana',opt));danaGrid.appendChild(el);});
+    pulsaOptions.forEach(opt=>{const el=createOptionEl(opt);el.addEventListener('click',()=>openOrderModal('Pulsa','pulsa',opt));pulsaGrid.appendChild(el);});
+
+    const orderModal=document.getElementById('orderModal');
+    const modalTitle=document.getElementById('modalTitle');
+    const buyerName=document.getElementById('buyerName');
+    const modalNumber=document.getElementById('modalNumber');
+    const modalNominal=document.getElementById('modalNominal');
+    const modalHarga=document.getElementById('modalHarga');
+    const modalTotal=document.getElementById('modalTotal');
+    const modalTanggal=document.getElementById('modalTanggal');
+    const modalJenis=document.getElementById('modalJenis');
+    const danaNumberInput=document.getElementById('danaNumber');
+    const hpNumberInput=document.getElementById('hpNumber');
+    const sendWhatsAppBtn=document.getElementById('sendWhatsApp');
+    const closeModalBtn=document.getElementById('closeModal');
+
+    let currentSelection={jenis:'',nominal:'',harga:0};
+
+    function openOrderModal(title,jenis,opt){
+      currentSelection={jenis,nominal:opt.nominal,harga:opt.harga};
+      modalTitle.textContent=`Pembelian — ${title}`;
+      modalJenis.textContent=title;
+      modalNumber.value=(jenis==='dana')?danaNumberInput.value:hpNumberInput.value;
+      modalNominal.value=opt.nominal;
+      modalHarga.textContent=formatRupiah(opt.harga);
+      const total=opt.harga+5000;
+      modalTotal.textContent=formatRupiah(total);
+      modalTanggal.textContent=new Date().toLocaleString('id-ID');
+      buyerName.value='';
+      orderModal.classList.add('show');
+      orderModal.setAttribute('aria-hidden','false');
+    }
+
+    function closeOrderModal(){orderModal.classList.remove('show');orderModal.setAttribute('aria-hidden','true');}
+    closeModalBtn.addEventListener('click',closeOrderModal);
+    orderModal.addEventListener('click',e=>{if(e.target===orderModal)closeOrderModal();});
+
+    // ✅ Kirim ke WhatsApp
+    sendWhatsAppBtn.addEventListener('click',function(){
+      const name=buyerName.value.trim();
+      const nomor=modalNumber.value.trim();
+      if(!name){alert('Mohon isi nama Anda.');buyerName.focus();return;}
+      if(!nomor){alert('Mohon isi nomor (HP / DANA).');modalNumber.focus();return;}
+
+      const jenisLabel=(currentSelection.jenis==='dana')?'Top Up DANA':'Pulsa';
+      const harga=currentSelection.harga;
+      const admin=5000;
+      const total=harga+admin;
+      const tanggal=new Date().toLocaleString('id-ID');
+
+      const pesan=[
+        `Halo Admin, saya ingin melakukan ${jenisLabel}.`,
+        ``,
+        `Nama: ${name}`,
+        `Nomor: ${nomor}`,
+        `Nominal: ${currentSelection.nominal}`,
+        `Harga: ${formatRupiah(harga)}`,
+        `Biaya Admin: Rp5.000`,
+        `Total: ${formatRupiah(total)}`,
+        `Tanggal: ${tanggal}`,
+        ``,
+        `Mohon instruksi pembayaran. Terima kasih.`
+      ].join('\n');
+
+      const waNumber="6285768163579"; // nomor admin dalam format internasional
+      const waUrl=`https://wa.me/${waNumber}?text=${encodeURIComponent(pesan)}`;
+      window.open(waUrl,"_blank");
+      closeOrderModal();
+    });
+
+    danaNumberInput.addEventListener('input',()=>{if(currentSelection.jenis==='dana')modalNumber.value=danaNumberInput.value;});
+    hpNumberInput.addEventListener('input',()=>{if(currentSelection.jenis==='pulsa')modalNumber.value=hpNumberInput.value;});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOrderModal();});
+  </script>
+</body>
+</html>
